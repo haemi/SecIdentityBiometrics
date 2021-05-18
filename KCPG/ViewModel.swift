@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import LocalAuthentication
 
 class ViewModel {
 
@@ -14,18 +15,17 @@ class ViewModel {
         case writePrivateKeyWithBiometrics
     }
 
-    private let variant: Variant = .writePrivateKeyWithBiometrics
+    private let variant: Variant = .writeIdentityWithBiometrics
 
     init() {
         tryout()
     }
 
     func getBioSecAccessControl() -> SecAccessControl {
-        var error: Unmanaged<CFError>?
-        let access = SecAccessControlCreateWithFlags(nil,
+        let access = SecAccessControlCreateWithFlags(nil, // Use the default allocator.
                                                      kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
                                                      .userPresence,
-                                                     &error)
+                                                     nil) // Ignore any error.
         precondition(access != nil, "SecAccessControlCreateWithFlags failed")
         return access!
     }
@@ -129,43 +129,31 @@ class ViewModel {
             let status = SecItemCopyMatching(getIdentityQuery as CFDictionary, &identityItem)
             debugPrint(status, identityItem)
         } else {
+            let getIdentityQuery: [String: Any] = [kSecClass as String: kSecClassIdentity,
+                                                   kSecReturnData as String: true,
+                                                   kSecAttrApplicationTag as String: privKeyAttrApplicationTag]
+
+            var secIdentity: CFTypeRef?
+
+            let status = SecItemCopyMatching(getIdentityQuery as CFDictionary, &secIdentity)
+            debugPrint(status, secIdentity)
+
             deleteAllKeysInKeyChain()
             deleteCertificates()
             deleteIdentities()
 
-            let getIdentityQuery: [String: Any] = [kSecClass as String: kSecClassIdentity,
-                                                   kSecReturnRef as String: true,
-                                                   kSecAttrApplicationTag as String: privKeyAttrApplicationTag]
+            let identityAddition: [String: Any] = [
+                kSecClass as String: kSecClassIdentity,
+                kSecValueData as String: secIdentity,
+                kSecAttrLabel as String: "ListenerIdentity"
+            ]
 
-            var identityItem: CFTypeRef?
-
-            let status = SecItemCopyMatching(getIdentityQuery as CFDictionary, &identityItem)
-            debugPrint(status, identityItem)
-
-            var certificateRef: SecCertificate?
-            var privateKeyRef2: SecKey?
-            SecIdentityCopyCertificate(identityItem as! SecIdentity, &certificateRef)
-            SecIdentityCopyPrivateKey(identityItem as! SecIdentity, &privateKeyRef2)
-
-            let addquery2: [String: Any] = [kSecClass as String: kSecClassCertificate,
-                                           kSecValueRef as String: certificateRef,
-                                           kSecAttrAccessControl as String: getBioSecAccessControl(),
-                                           kSecAttrPublicKeyHash as String: privKeyAttrApplicationLabel,
-                                           kSecAttrLabel as String: "com.example.keys.mycert"]
-
-            let certAddStatus2 = SecItemAdd(addquery2 as CFDictionary, nil)
-
-
-            let addquery3: [String: Any] = [kSecClass as String: kSecClassKey,
-                                            kSecAttrApplicationLabel as String: privKeyAttrApplicationLabel,
-                                            kSecAttrAccessControl as String: getBioSecAccessControl(),
-                                            kSecAttrApplicationTag as String: privKeyAttrApplicationTag,
-                                           kSecValueRef as String: privateKeyRef2]
-            let certAddStatus3 = SecItemAdd(addquery3 as CFDictionary, nil)
+            let identityStatus = SecItemAdd(identityAddition as CFDictionary, nil)
+            debugPrint(identityStatus)
 
             let getIdentityQueryBio: [String: Any] = [kSecClass as String: kSecClassIdentity,
                                                    kSecReturnRef as String: true,
-                                                   kSecAttrApplicationTag as String: privKeyAttrApplicationTag]
+                                                   kSecAttrLabel as String: "ListenerIdentity"]
 
             var identityItemBio: CFTypeRef?
 
