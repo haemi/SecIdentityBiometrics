@@ -7,6 +7,7 @@
 
 import Foundation
 import LocalAuthentication
+import OSLog
 
 class ViewModel {
 
@@ -15,10 +16,10 @@ class ViewModel {
         case writePrivateKeyWithBiometrics
     }
 
-    private let variant: Variant = .writeIdentityWithBiometrics
+    private let variant: Variant = .writePrivateKeyWithBiometrics
 
     init() {
-        tryout()
+        DispatchQueue.main.async { self.tryout() }
     }
 
     func getBioSecAccessControl() -> SecAccessControl {
@@ -69,6 +70,7 @@ class ViewModel {
 
         let keyPairGenerationStatus = SecKeyGeneratePair(keyPairAttributes as CFDictionary, &publicKeyRef, &privateKeyRef)
 
+        debugPrint(keyPairGenerationStatus)
         guard keyPairGenerationStatus == errSecSuccess else { return }
 
         // At this stage I create CSR using above pair of keys and do exchane it to PEM (X509) to finaly parse that to DER
@@ -104,9 +106,11 @@ class ViewModel {
 
         let deletePublicKeyStatus = SecItemDelete(deletePublicKeyQuery as CFDictionary)
 
+        debugPrint(deletePublicKeyStatus)
         guard deletePublicKeyStatus == errSecSuccess else { return }
 
         guard let cert = SecCertificateCreateWithData(kCFAllocatorDefault, pemCertData as CFData) else { return }
+        debugPrint("after cert")
 
         // Add cer to keychain
 
@@ -117,48 +121,100 @@ class ViewModel {
 
         let certAddStatus = SecItemAdd(addquery as CFDictionary, nil)
 
+        debugPrint(certAddStatus)
         guard certAddStatus == errSecSuccess else { return }
 
         if variant == .writePrivateKeyWithBiometrics {
+            debugPrint("before getIdentityQuery")
             let getIdentityQuery: [String: Any] = [kSecClass as String: kSecClassIdentity,
                                                    kSecReturnRef as String: true,
                                                    kSecAttrApplicationTag as String: privKeyAttrApplicationTag]
 
             var identityItem: CFTypeRef?
 
+            debugPrint("before SecItemCopyMatching", getIdentityQuery)
             let status = SecItemCopyMatching(getIdentityQuery as CFDictionary, &identityItem)
+            debugPrint("after SecItemCopyMatching", getIdentityQuery)
+            debugPrint(status)
             debugPrint(status, identityItem)
         } else {
             let getIdentityQuery: [String: Any] = [kSecClass as String: kSecClassIdentity,
-                                                   kSecReturnData as String: true,
+                                                   kSecReturnRef as String: true,
                                                    kSecAttrApplicationTag as String: privKeyAttrApplicationTag]
 
             var secIdentity: CFTypeRef?
 
             let status = SecItemCopyMatching(getIdentityQuery as CFDictionary, &secIdentity)
-            debugPrint(status, secIdentity)
+            debugPrint("8735", status, secIdentity)
 
-            deleteAllKeysInKeyChain()
-            deleteCertificates()
-            deleteIdentities()
 
+
+
+            // Notice that kSecClass as String: kSecClassIdentity is not being used here as this is inferred from kSecValueRef.
             let identityAddition: [String: Any] = [
-                kSecClass as String: kSecClassIdentity,
-                kSecValueData as String: secIdentity,
+                kSecValueRef as String: secIdentity,
                 kSecAttrLabel as String: "ListenerIdentity"
             ]
 
-            let identityStatus = SecItemAdd(identityAddition as CFDictionary, nil)
-            debugPrint(identityStatus)
+            let indetityStatus = SecItemAdd(identityAddition as CFDictionary, nil)
 
-            let getIdentityQueryBio: [String: Any] = [kSecClass as String: kSecClassIdentity,
-                                                   kSecReturnRef as String: true,
-                                                   kSecAttrLabel as String: "ListenerIdentity"]
+            guard indetityStatus == errSecSuccess else {
+                os_log("Error: couldn’t add identity: %{public}@", indetityStatus)
+                return
+            }
+            os_log("Added identity SUCCESSFULLY %d", indetityStatus)
 
-            var identityItemBio: CFTypeRef?
+            // On the query, kSecClassIdentity is used to make sure a SecIdentity is extracted.
+            let identityQuery: [String: Any] = [
+                kSecClass as String: kSecClassIdentity,
+                kSecReturnRef as String: true,
+                kSecAttrLabel as String: "ListenerIdentity"
+            ]
+            var identityItem: CFTypeRef?
+            let getIdentityStatus = SecItemCopyMatching(identityQuery as CFDictionary, &identityItem)
 
-            let statusBio = SecItemCopyMatching(getIdentityQueryBio as CFDictionary, &identityItemBio)
-            debugPrint(statusBio, identityItemBio)
+            guard getIdentityStatus == errSecSuccess else {
+                os_log("Error: couldn’t get identity: %d", getIdentityStatus)
+                return
+            }
+            let secIdentityNew = identityItem as! SecIdentity
+            debugPrint(secIdentityNew)
+
+
+
+
+
+
+
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//            let identityAddition: [String: Any] = [
+//                kSecValueRef as String: secIdentity,
+//                kSecAttrLabel as String: "ListenerIdentity"
+//            ]
+//
+//            let identityStatus = SecItemAdd(identityAddition as CFDictionary, nil)
+//            debugPrint("8735", identityStatus)
+//
+//            let getIdentityQueryBio: [String: Any] =  [
+//                kSecClass as String: kSecClassIdentity,
+//                kSecReturnRef as String: true,
+//                kSecAttrLabel as String: "ListenerIdentity"
+//            ]
+//
+//            var identityItemBio: CFTypeRef?
+//
+//            let statusBio = SecItemCopyMatching(getIdentityQueryBio as CFDictionary, &identityItemBio)
+//            debugPrint("8735", statusBio, identityItemBio)
         }
     }
 
