@@ -47,6 +47,7 @@
 		F87A0AA92652870D00E711E0 /* KCPGUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KCPGUITests.swift; sourceTree = "<group>"; };
 		F87A0AAB2652870D00E711E0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F87A0AB72652872100E711E0 /* ViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModel.swift; sourceTree = "<group>"; };
+		F8EB450B2670A8E10038C89E /* KCPG.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KCPG.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,6 +98,7 @@
 		F87A0A8B2652870B00E711E0 /* KCPG */ = {
 			isa = PBXGroup;
 			children = (
+				F8EB450B2670A8E10038C89E /* KCPG.entitlements */,
 				F87A0A8C2652870B00E711E0 /* KCPGApp.swift */,
 				F87A0A8E2652870B00E711E0 /* ContentView.swift */,
 				F87A0AB72652872100E711E0 /* ViewModel.swift */,
@@ -421,6 +423,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = KCPG/KCPG.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"KCPG/Preview Content\"";
 				DEVELOPMENT_TEAM = 6VC52FR9XZ;
@@ -443,6 +446,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = KCPG/KCPG.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"KCPG/Preview Content\"";
 				DEVELOPMENT_TEAM = 6VC52FR9XZ;
